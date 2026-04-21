@@ -16,6 +16,8 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/flant/shell-operator/pkg/app"
 )
 
 func TestRunAndLogLines(t *testing.T) {
@@ -238,6 +240,70 @@ plain text
 		assert.Equal(t, expected, buf.String())
 
 		buf.Reset()
+	})
+}
+
+func TestRunAndLogLinesProxyJsonUsesCompactTextOutput(t *testing.T) {
+	t.Cleanup(func() {
+		app.LogType = "text"
+		app.LogLevel = "info"
+	})
+
+	t.Run("text", func(t *testing.T) {
+		app.LogType = "text"
+		app.LogLevel = "info"
+
+		var buf bytes.Buffer
+		logger := app.NewLogger(&buf)
+
+		jsonLine := `{"level":"info","msg":"fatal: [localhost]: FAILED!","hook_event_data":{"res":{"stderr":"does not exist"}}}`
+		ex := NewExecutor("", "echo", []string{jsonLine}, []string{}).
+			WithLogProxyHookJSON(true).
+			WithLogger(logger)
+
+		_, err := ex.RunAndLogLines(context.Background(), map[string]string{
+			"binding": "Monitor clusterconfiguration",
+			"event":   "kubernetes",
+			"hook":    "kubesphere/installRunner.py",
+			"queue":   "main",
+			"task":    "HookRun",
+		})
+		require.NoError(t, err)
+
+		got := buf.String()
+		assert.NotContains(t, got, "logger=")
+		assert.NotContains(t, got, "hook_event")
+		assert.NotContains(t, got, "msg='")
+		assert.NotContains(t, got, "!SOMETHING GOES WRONG")
+		assert.Contains(t, got, "INFO fatal: [localhost]: FAILED!")
+		assert.Contains(t, got, "binding=Monitor clusterconfiguration")
+		assert.Contains(t, got, "hook=kubesphere/installRunner.py")
+		assert.Contains(t, got, "queue=main")
+		assert.Contains(t, got, "task=HookRun")
+	})
+
+	t.Run("color", func(t *testing.T) {
+		app.LogType = "color"
+		app.LogLevel = "info"
+
+		var buf bytes.Buffer
+		logger := app.NewLogger(&buf)
+
+		jsonLine := `{"level":"warn","msg":"ansible warning","hook_event_data":{"x":"y"}}`
+		ex := NewExecutor("", "echo", []string{jsonLine}, []string{}).
+			WithLogProxyHookJSON(true).
+			WithLogger(logger)
+
+		_, err := ex.RunAndLogLines(context.Background(), map[string]string{
+			"binding": "b",
+			"hook":    "h",
+		})
+		require.NoError(t, err)
+
+		got := buf.String()
+		assert.Contains(t, got, "\x1b[")
+		assert.Contains(t, got, "WARNING ansible warning")
+		assert.NotContains(t, got, "hook_event")
 	})
 }
 
