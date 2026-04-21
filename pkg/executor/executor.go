@@ -103,7 +103,7 @@ func NewExecutor(dir string, entrypoint string, args []string, envs []string) *E
 	ex := &Executor{
 		cmd:          cmd,
 		proxyJsonKey: "proxyJsonLog",
-		logger:       log.NewLogger().Named("auto-executor"),
+		logger:       log.Default().Named("auto-executor"),
 	}
 
 	return ex

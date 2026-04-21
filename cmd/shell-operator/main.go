@@ -16,14 +16,13 @@ import (
 func main() {
 	kpApp := kingpin.New(app.AppName, fmt.Sprintf("%s %s: %s", app.AppName, app.Version, app.AppDescription))
 
-	logger := log.NewLogger()
-	log.SetDefault(logger)
-
 	// override usage template to reveal additional commands with information about start command
 	kpApp.UsageTemplate(app.OperatorUsageTemplate(app.AppName))
 
 	// Initialize klog wrapper when all values are parsed
 	kpApp.Action(func(_ *kingpin.ParseContext) error {
+		logger := app.NewLogger(os.Stdout)
+		log.SetDefault(logger)
 		klogtolog.InitAdapter(app.DebugKubernetesAPI, logger.Named("klog"))
 		return nil
 	})
@@ -39,7 +38,7 @@ func main() {
 	// start main loop
 	startCmd := kpApp.Command("start", "Start shell-operator.").
 		Default().
-		Action(start(logger))
+		Action(start())
 	app.DefineStartCommandFlags(kpApp, startCmd)
 
 	debug.DefineDebugCommands(kpApp)

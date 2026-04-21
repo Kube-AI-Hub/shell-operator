@@ -25,11 +25,12 @@ const (
 	AppDescription = "Shell-operator is a tool for running event-driven scripts in a Kubernetes cluster"
 )
 
-func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
+func start() func(_ *kingpin.ParseContext) error {
 	return func(_ *kingpin.ParseContext) error {
 		app.AppStartMessage = fmt.Sprintf("%s %s", app.AppName, app.Version)
 		ctx := context.Background()
 		telemetryShutdown := registerTelemetry(ctx)
+		logger := log.Default()
 
 		// Initialize metric names with the configured prefix
 		metrics.InitMetrics(app.PrometheusMetricsPrefix)

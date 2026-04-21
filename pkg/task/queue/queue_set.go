@@ -32,7 +32,7 @@ func NewTaskQueueSet() *TaskQueueSet {
 	return &TaskQueueSet{
 		Queues:   newQueueStorage(),
 		MainName: MainQueueName,
-		logger:   log.NewLogger().Named("task_queue_set"),
+		logger:   log.Default().Named("task_queue_set"),
 	}
 }
 
@@ -97,7 +97,7 @@ func (tqs *TaskQueueSet) NewNamedQueue(name string, handler func(ctx context.Con
 	}
 
 	if q.logger == nil {
-		q.logger = log.NewLogger().Named("task_queue")
+		q.logger = log.Default().Named("task_queue")
 	}
 
 	tqs.Queues.Set(q.Name, q)

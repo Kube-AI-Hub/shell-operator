@@ -106,7 +106,7 @@ func NewShellOperator(ctx context.Context, metricsStorage, hookMetricStorage met
 	}
 
 	if so.logger == nil {
-		so.logger = log.NewLogger().Named("shell-operator")
+		so.logger = log.Default().Named("shell-operator")
 	}
 
 	so.MetricStorage = metricsStorage

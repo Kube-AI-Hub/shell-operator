@@ -56,7 +56,7 @@ func NewWebhookManager(kubeClient *klient.Client, opts ...Option) *WebhookManage
 	}
 
 	if manager.Logger == nil {
-		manager.Logger = log.NewLogger().Named("admission-webhook-manager")
+		manager.Logger = log.Default().Named("admission-webhook-manager")
 	}
 
 	return manager

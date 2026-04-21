@@ -2,7 +2,9 @@ package app
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
+	"os"
 	"strings"
 	"time"
 
@@ -48,34 +50,61 @@ type Registerer interface {
 		expirer func(key string, newValue string) time.Duration)
 }
 
+func normalizeLogType(raw string) string {
+	switch strings.ToLower(raw) {
+	case "json", "text", "color":
+		return strings.ToLower(raw)
+	default:
+		return "text"
+	}
+}
+
+func outputWriter(base io.Writer) io.Writer {
+	if base == nil {
+		base = os.Stdout
+	}
+
+	switch normalizeLogType(LogType) {
+	case "color":
+		return NewPrettyWriter(base, true)
+	case "text":
+		return NewPrettyWriter(base, false)
+	}
+
+	return base
+}
+
+func handlerType() log.HandlerType {
+	if normalizeLogType(LogType) == "json" {
+		return log.JSONHandlerType
+	}
+
+	return log.JSONHandlerType
+}
+
+func NewLogger(output io.Writer) *log.Logger {
+	return log.NewLogger(
+		log.WithLevel(log.LogLevelFromStr(LogLevel).Level()),
+		log.WithHandlerType(handlerType()),
+		log.WithOutput(outputWriter(output)),
+	)
+}
+
 // SetupLogging sets logger formatter and level.
 func SetupLogging(runtimeConfig Registerer, logger *log.Logger) {
-	// TODO: if we need formatters - add to logger
-	// jsonFormatter := log.JSONFormatter{DisableTimestamp: LogNoTime}
-	// textFormatter := log.TextFormatter{DisableTimestamp: LogNoTime, DisableColors: true}
-	// colorFormatter := log.TextFormatter{DisableTimestamp: LogNoTime, ForceColors: true, FullTimestamp: true}
-	// switch strings.ToLower(LogType) {
-	// case "json":
-	// 	log.SetFormatter(&jsonFormatter)
-	// case "text":
-	// 	log.SetFormatter(&textFormatter)
-	// case "color":
-	// 	log.SetFormatter(&colorFormatter)
-	// default:
-	// 	log.SetFormatter(&jsonFormatter)
-	// }
-	// if LogProxyHookJSON {
-	// 	formatter := log.StandardLogger().Formatter
-	// 	log.SetFormatter(&ProxyJsonWrapperFormatter{WrappedFormatter: formatter})
-	// }
+	logger.SetLevel(log.LogLevelFromStr(LogLevel))
+	log.SetDefault(logger)
 
-	log.SetDefaultLevel(log.LogLevelFromStr(LogLevel))
+	if runtimeConfig == nil {
+		return
+	}
 
 	runtimeConfig.Register("log.level",
 		fmt.Sprintf("Global log level. Default duration for debug level is %s", ForcedDurationForDebugLevel),
 		strings.ToLower(LogLevel),
 		func(_ string, newValue string) error {
 			logger.Info("Change log level", slog.String("value", newValue))
+			logger.SetLevel(log.LogLevelFromStr(newValue))
 			log.SetDefaultLevel(log.LogLevelFromStr(newValue))
 			return nil
 		}, func(_ string, newValue string) time.Duration {

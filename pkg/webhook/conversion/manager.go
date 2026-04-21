@@ -58,7 +58,7 @@ func NewWebhookManager(opts ...Option) *WebhookManager {
 	}
 
 	if manager.Logger == nil {
-		manager.Logger = log.NewLogger().Named("conversion-webhook-manager")
+		manager.Logger = log.Default().Named("conversion-webhook-manager")
 	}
 
 	return manager

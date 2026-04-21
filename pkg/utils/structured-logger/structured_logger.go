@@ -29,14 +29,12 @@ type StructuredLogger struct {
 }
 
 func (l *StructuredLogger) NewLogEntry(r *http.Request) middleware.LogEntry {
-	entry := &StructuredLoggerEntry{Logger: log.NewLogger()}
-
-	entry.Logger = entry.Logger.With(
+	entry := &StructuredLoggerEntry{Logger: l.Logger.With(
 		// TODO: make snake_case
 		slog.String(pkg.LogKeyOperatorComponent, l.ComponentLabel),
 		slog.String(pkg.LogKeyHTTPMethod, r.Method),
 		slog.String(pkg.LogKeyURI, r.RequestURI),
-	)
+	)}
 	// entry.Logger.Info("request started")
 
 	return entry

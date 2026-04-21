@@ -187,7 +187,7 @@ func NewTasksQueue(name string, metricStorage metricsstorage.Storage, opts ...Ta
 		ExponentialBackoffFn: func(failureCount int) time.Duration {
 			return exponential_backoff.CalculateDelay(DefaultInitialDelayOnFailedTask, failureCount)
 		},
-		logger: log.NewLogger().Named("task_queue").Named(name),
+		logger: log.Default().Named("task_queue").Named(name),
 		// Pre-allocate buffers
 		contextBuffer:   make([]bindingcontext.BindingContext, 0, 128),
 		monitorIDBuffer: make([]string, 0, 128),
