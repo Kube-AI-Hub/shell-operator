@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -101,11 +99,6 @@ func formatPrettyLog(payload map[string]any) (string, string) {
 		message = "-"
 	}
 
-	context := formatContext(payload)
-	if context != "" {
-		return fmt.Sprintf("%s %s %s | %s", timeValue, level, message, context), level
-	}
-
 	return fmt.Sprintf("%s %s %s", timeValue, level, message), level
 }
 
@@ -128,118 +121,6 @@ func prettyLevel(level string) string {
 	}
 }
 
-func formatContext(payload map[string]any) string {
-	priority := []string{
-		"binding",
-		"event",
-		"hook",
-		"queue",
-		"task",
-		"output",
-		"error",
-		"component",
-		"operator.component",
-		"http_method",
-		"uri",
-		"resp_status",
-		"resp_elapsed_ms",
-		"address",
-		"port",
-	}
-
-	rename := map[string]string{
-		"operator.component": "component",
-		"http_method":        "method",
-		"resp_status":        "status",
-		"resp_elapsed_ms":    "elapsed_ms",
-	}
-
-	used := make(map[string]struct{}, len(priority))
-	parts := make([]string, 0, len(priority))
-
-	for _, key := range priority {
-		value, ok := payload[key]
-		if !ok {
-			continue
-		}
-
-		rendered, ok := renderField(renameKey(rename, key), value)
-		if !ok {
-			continue
-		}
-
-		parts = append(parts, rendered)
-		used[key] = struct{}{}
-	}
-
-	keys := make([]string, 0, len(payload))
-	for key := range payload {
-		if _, ok := used[key]; ok || skipField(key) {
-			continue
-		}
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-	for _, key := range keys {
-		rendered, ok := renderField(key, payload[key])
-		if !ok {
-			continue
-		}
-		parts = append(parts, rendered)
-		if len(parts) >= 8 {
-			break
-		}
-	}
-
-	return strings.Join(parts, " ")
-}
-
-func renameKey(mapping map[string]string, key string) string {
-	if short, ok := mapping[key]; ok {
-		return short
-	}
-	return key
-}
-
-func skipField(key string) bool {
-	if key == "level" || key == "logger" || key == "msg" || key == "source" || key == "stacktrace" || key == "time" || key == ProxyJsonLogKey {
-		return true
-	}
-
-	if strings.HasPrefix(key, "hook_") || strings.HasPrefix(key, "hook.") || strings.HasPrefix(key, "hook_event_data") {
-		return true
-	}
-
-	return false
-}
-
-func renderField(key string, value any) (string, bool) {
-	if value == nil {
-		return "", false
-	}
-
-	switch v := value.(type) {
-	case string:
-		if v == "" {
-			return "", false
-		}
-		return key + "=" + truncate(v), true
-	case bool:
-		return key + "=" + strconv.FormatBool(v), true
-	case float64:
-		return key + "=" + strconv.FormatFloat(v, 'f', -1, 64), true
-	case int:
-		return key + "=" + strconv.Itoa(v), true
-	case int64:
-		return key + "=" + strconv.FormatInt(v, 10), true
-	case uint64:
-		return key + "=" + strconv.FormatUint(v, 10), true
-	default:
-		return "", false
-	}
-}
-
 func stringValue(value any) string {
 	switch v := value.(type) {
 	case string:
@@ -247,12 +128,4 @@ func stringValue(value any) string {
 	default:
 		return ""
 	}
-}
-
-func truncate(value string) string {
-	const maxLen = 120
-	if len(value) <= maxLen {
-		return value
-	}
-	return value[:maxLen] + "..."
 }

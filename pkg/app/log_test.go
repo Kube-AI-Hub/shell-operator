@@ -108,7 +108,10 @@ func TestPrettyWriterFormatsJSONLogCompactly(t *testing.T) {
 	if strings.Contains(got, "msg='") {
 		t.Fatalf("expected unquoted message, got %q", got)
 	}
-	if !strings.Contains(got, "2026-04-21T15:18:49+08:00 INFO Hook executed successfully | binding=Monitor clusterconfiguration event=kubernetes hook=kubesphere/installRunner.py queue=main task=HookRun") {
+	if strings.Contains(got, " | ") {
+		t.Fatalf("expected no structured suffix after message, got %q", got)
+	}
+	if !strings.Contains(got, "2026-04-21T15:18:49+08:00 INFO Hook executed successfully") {
 		t.Fatalf("unexpected compact output: %q", got)
 	}
 }
